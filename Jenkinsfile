@@ -3,7 +3,6 @@ pipeline {
   agent any
 
   options {
-    ansiColor('xterm')
     timestamps()
     buildDiscarder(logRotator(numToKeepStr: '20'))
   }
