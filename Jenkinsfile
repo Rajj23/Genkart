@@ -42,21 +42,60 @@ pipeline {
       }
     }
 
-    stage('Install Dependencies') {
-      parallel {
-        stage('Client: Install') {
-          steps {
-            dir('client') {
-              bat 'npm ci'
-            }
+    stage('Create Env Files') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'mongo-uri', variable: 'MONGO_URI'),
+          string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
+          string(credentialsId: 'jwt-user-secret', variable: 'JWT_USER_SECRET'),
+          string(credentialsId: 'email-user', variable: 'EMAIL_USER'),
+          string(credentialsId: 'email-pass', variable: 'EMAIL_PASS'),
+          string(credentialsId: 'cloudinary-cloud-name', variable: 'CLOUDINARY_CLOUD_NAME'),
+          string(credentialsId: 'cloudinary-api-key', variable: 'CLOUDINARY_API_KEY'),
+          string(credentialsId: 'cloudinary-api-secret', variable: 'CLOUDINARY_API_SECRET')
+        ]) {
+          dir('server') {
+            writeFile file: '.env', text: """
+PORT=5555
+NODE_ENV=development
+CLIENT_URL=http://localhost:3005
+
+MONGO_URI=${MONGO_URI}
+
+JWT_SECRET=${JWT_SECRET}
+JWT_USER_SECRET=${JWT_USER_SECRET}
+JWT_EXPIRES_IN=1d
+
+EMAIL_USER=${EMAIL_USER}
+EMAIL_PASS=${EMAIL_PASS}
+
+CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+CLOUDINARY_FOLDER_NAME=genkart
+
+RATE_LIMIT_WINDOW_MINUTES=15
+RATE_LIMIT_MAX=100
+"""
+          }
+
+          dir('client') {
+            writeFile file: '.env', text: """
+NEXT_PUBLIC_API_URL=http://localhost:5555
+"""
           }
         }
-        stage('Server: Install') {
-          steps {
-            dir('server') {
-              bat 'npm ci'
-            }
-          }
+      }
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        dir('client') {
+          bat 'npm install'
+        }
+
+        dir('server') {
+          bat 'npm install'
         }
       }
     }
