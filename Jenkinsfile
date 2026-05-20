@@ -9,7 +9,7 @@ pipeline {
 
   parameters {
     string(name: 'DOCKER_REGISTRY', defaultValue: 'docker.io', description: 'Docker registry (e.g. docker.io)')
-    string(name: 'IMAGE_NAMESPACE', defaultValue: 'youruser', description: 'Docker namespace / username')
+    string(name: 'IMAGE_NAMESPACE', defaultValue: 'rajjaiswal23', description: 'Docker namespace / username')
     booleanParam(name: 'DEPLOY', defaultValue: false, description: 'If true, run the deploy stage')
     string(name: 'GCP_PROJECT', defaultValue: '', description: '(Optional) GCP project for deploy-helm.sh')
     string(name: 'GKE_CLUSTER', defaultValue: '', description: '(Optional) GKE cluster for deploy-helm.sh')
