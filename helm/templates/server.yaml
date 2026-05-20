@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genkart-server
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: genkart-server
+  template:
+    metadata:
+      labels:
+        app: genkart-server
+    spec:
+      containers:
+        - name: server
+          image: {{ .Values.image.server.repository }}:{{ .Values.image.server.tag }}
+          imagePullPolicy: {{ .Values.image.server.pullPolicy }}
+          ports:
+            - containerPort: 5555
+          envFrom:
+            - secretRef:
+                name: genkart-server-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: genkart-server
+spec:
+  selector:
+    app: genkart-server
+  ports:
+    - protocol: TCP
+      port: 5555
+      targetPort: 5555
+  type: {{ .Values.service.server.type }}

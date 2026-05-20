@@ -1,0 +1,55 @@
+# Ignore node_modules and build directories
+/node_modules
+/build
+.env
+
+# Ignore logs and temporary files
+/logs
+/tmp
+
+# Ignore coverage reports
+/coverage
+/coverage/*
+/coverage/**/*
+
+
+
+# Ignore environment variable files
+./client/.env
+./server/.env
+
+
+# Ignore IDE and editor specific files
+# Kubernetes secrets
+k8s-client-secret.yaml
+k8s-server-secret.yaml
+
+
+# helm charts secrets
+helm/templates/server-secret.yaml
+helm/templates/client-secret.yaml
+
+
+# Terraform state files
+terraform/terraform.tfvars
+terraform/.terraform/providers/registry.terraform.io/hashicorp/google/6.37.0/linux_amd64/terraform-provider-google_v6.37.0_x5
+terraform/terraform.tfstate
+
+terraform/terraform.tfstate.backup
+
+terraform/.terraform/providers/registry.terraform.io/hashicorp/null/3.2.4/linux_amd64/terraform-provider-null_v3.2.4_x5
+
+# Ignore all env and secret files
+*.env
+**/*.env
+.env.*
+.env.local
+.env.*.local
+*.secret
+*.key
+*.pem
+
+# Ignore Kubernetes and Helm secret YAMLs
+k8s/*secret*.yaml
+helm/**/*secret*.yaml
+**/*secret*.yaml

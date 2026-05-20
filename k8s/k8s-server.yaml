@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genkart-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: genkart-server
+  template:
+    metadata:
+      labels:
+        app: genkart-server
+    spec:
+      containers:
+        - name: server
+          image: chirag117/gen-serv:v1
+          ports:
+            - containerPort: 5555
+          envFrom:
+            - secretRef:
+                name: genkart-server-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: genkart-server
+spec:
+  selector:
+    app: genkart-server
+  ports:
+    - protocol: TCP
+      port: 5555
+      targetPort: 5555
+  type: ClusterIP

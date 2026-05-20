@@ -1,0 +1,6 @@
+# This file is used to specify files and directories that should be ignored by Docker when building the image
+**/node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.env

@@ -1,0 +1,22 @@
+services:
+  client:
+    container_name: gen-client
+    build:
+      context: ./client
+      dockerfile: next.dockerfile
+    ports:
+      - '3005:3005'
+    env_file:
+      - ./client/.env
+    depends_on:
+      - server
+
+  server:
+    container_name: gen-serv
+    build:
+      context: ./server
+      dockerfile: node.dockerfile
+    ports:
+      - '5555:5555'
+    env_file:
+      - ./server/.env

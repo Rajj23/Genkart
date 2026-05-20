@@ -1,0 +1,35 @@
+# Prometheus values for basic monitoring in GKE
+alertmanager:
+  enabled: false
+
+pushgateway:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+server:
+  service:
+    type: LoadBalancer
+    port: 9090
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  securityContext:
+    runAsUser: 65534
+    fsGroup: 65534
+  serviceAccount:
+    create: true
+    name: prometheus-server
+
+rbac:
+  create: true

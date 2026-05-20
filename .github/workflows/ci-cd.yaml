@@ -1,0 +1,123 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - LICENSE
+      - README.md
+      - readme-assets/**
+      - .gitignore
+      - terraform/**
+      - argocd/**
+      - helm/**
+      - .github/workflows/**
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - LICENSE
+      - README.md
+      - readme-assets/**
+      - .gitignore
+      - terraform/**
+      - argocd/**
+      - helm/**
+      - .github/workflows/**
+
+jobs:
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: >
+      github.event_name == 'push' || github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build client image
+        id: build_client
+        run: docker build -f client/next.dockerfile -t client:${{ github.sha }} ./client
+      - name: Build server image
+        id: build_server
+        run: docker build -f server/node.dockerfile -t server:${{ github.sha }} ./server
+      - name: Trivy scan client
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          image-ref: 'client:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+      - name: Trivy scan server
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          image-ref: 'server:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: >
+      github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v2
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  docker-build-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: [trivy-scan, sonarqube]
+    if: >
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push client image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          file: ./client/next.dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/gen-client:latest, ${{ secrets.DOCKERHUB_USERNAME }}/gen-client:${{ github.sha }}
+      - name: Build and push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/node.dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/gen-serv:latest, ${{ secrets.DOCKERHUB_USERNAME }}/gen-serv:${{ github.sha }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
