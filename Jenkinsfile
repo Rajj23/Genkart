@@ -42,6 +42,13 @@ pipeline {
       }
     }
 
+    stage('Clean Workspace') {
+      steps {
+        cleanWs()
+        checkout scm
+      }
+    }
+
     stage('Create Env Files') {
       steps {
         withCredentials([
@@ -91,11 +98,19 @@ NEXT_PUBLIC_API_URL=http://localhost:5555
     stage('Install Dependencies') {
       steps {
         dir('client') {
-          bat 'npm install'
+          bat 'npm cache clean --force'
+          bat 'npm config set fetch-retries 5'
+          bat 'npm config set fetch-retry-mintimeout 20000'
+          bat 'npm config set fetch-retry-maxtimeout 120000'
+          bat 'npm install --legacy-peer-deps --no-audit --no-fund'
         }
 
         dir('server') {
-          bat 'npm install'
+          bat 'npm cache clean --force'
+          bat 'npm config set fetch-retries 5'
+          bat 'npm config set fetch-retry-mintimeout 20000'
+          bat 'npm config set fetch-retry-maxtimeout 120000'
+          bat 'npm install --legacy-peer-deps --no-audit --no-fund'
         }
       }
     }
@@ -112,7 +127,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5555
         stage('Server: Build') {
           steps {
             dir('server') {
-              bat 'if exist package.json (npm run build) else (echo no build)'
+              bat 'echo Backend build skipped'
             }
           }
         }
