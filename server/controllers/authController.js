@@ -1,7 +1,7 @@
 const Users = require("../models/userSchema");
 const Admin = require("../models/adminSchema");
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const sendEmail = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
 const cookie = require("cookie");
@@ -42,7 +42,8 @@ const login = async (req, res) => {
     // res.setHeader('Authorization', `Bearer ${token}`);
     res.status(200).json({ message: "Login successful",token });
   } catch (error) {
-    res.status(500).json({ message: "Login Error", error });
+    console.error("Login Error Details:", error);
+    res.status(500).json({ message: "Login Error", error: error.message });
   }
 };
 

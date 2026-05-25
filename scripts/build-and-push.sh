@@ -5,7 +5,11 @@
 set -e
 
 # Fetch Docker Hub username from client/.env
-DOCKERHUB_USER=$(grep DOCKERHUB_USER client/.env | cut -d '=' -f2 | tr -d '"')
+# Fetch Docker Hub username from client/.env
+DOCKERHUB_USER=$(grep DOCKERHUB_USER client/.env | cut -d '=' -f2 | tr -d '"' 2>/dev/null || true)
+if [ -z "$DOCKERHUB_USER" ]; then
+  DOCKERHUB_USER="rajjaiswal23"
+fi
 CLIENT_IMAGE=$DOCKERHUB_USER/gen-client:v1
 SERVER_IMAGE=$DOCKERHUB_USER/gen-serv:v1
 

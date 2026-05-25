@@ -188,8 +188,9 @@ JWT_EXPIRES_IN=1d
   ```
 - Access UI:
   ```sh
-  kubectl port-forward svc/argocd-server -n argocd 8080:443
-  # Visit https://localhost:8080
+  # Using port 8085 to avoid collision with local Jenkins running on port 8080
+  kubectl port-forward svc/argocd-server -n argocd 8085:443
+  # Visit https://localhost:8085
   # Username: admin
   # Password:
   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
@@ -204,6 +205,13 @@ JWT_EXPIRES_IN=1d
   ```
 
 ### CI/CD & Quality
+
+- **Jenkins Local CI/CD Pipeline:** Uses the `Jenkinsfile` in the repository root to automate local Docker image building and deployment to Minikube.
+  - **Automating builds via webhook:**
+    1. Install the **GitHub Integration Plugin** (or **Git Plugin**) in Jenkins.
+    2. Go to your local Jenkins Job -> **Configure** -> under **Build Triggers**, check **GitHub hook trigger for GITScm polling** or use the **Generic Webhook Trigger**.
+    3. In your git repository settings (e.g. GitHub or local Git server like Gitea), add a Webhook pointing to: `http://<your-jenkins-ip>:8080/github-webhook/`
+    4. On every commit push, Jenkins will automatically build and deploy the app to Minikube using `./scripts/deploy-local.sh`.
 - **GitHub Actions:** Automated build, test, scan, and deploy.
 - **Trivy:** Container image vulnerability scanning.
 - **SonarQube:** Code quality and security analysis.

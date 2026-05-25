@@ -1,5 +1,12 @@
-**/node_modules
-npm-debug.log
-Dockerfile
-.dockerignore
+node_modules
+.git
+.gitignore
+.github
+*.log
+npm-debug.log*
 .env
+.env.local
+Dockerfile
+*.dockerfile
+.dockerignore
+README.md

@@ -17,7 +17,7 @@ spec:
           image: {{ .Values.image.server.repository }}:{{ .Values.image.server.tag }}
           imagePullPolicy: {{ .Values.image.server.pullPolicy }}
           ports:
-            - containerPort: 5555
+            - containerPort: 5560
           envFrom:
             - secretRef:
                 name: genkart-server-secrets
@@ -29,12 +29,12 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/path: "/metrics"
-    prometheus.io/port: "5555"
+    prometheus.io/port: "5560"
 spec:
   selector:
     app: genkart-server
   ports:
     - protocol: TCP
-      port: 5555
-      targetPort: 5555
+      port: 5560
+      targetPort: 5560
   type: {{ .Values.service.server.type }}

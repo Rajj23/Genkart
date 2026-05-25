@@ -18,7 +18,7 @@ service:
     port: 3005
   server:
     type: ClusterIP   # Server can remain ClusterIP, client will talk to it internally
-    port: 5555
+    port: 5560
 
 resources:
   client:

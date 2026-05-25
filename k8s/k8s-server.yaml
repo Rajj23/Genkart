@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: genkart-server
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: genkart-server
@@ -14,12 +14,27 @@ spec:
     spec:
       containers:
         - name: server
-          image: chirag117/gen-serv:v1
+          image: genkart-main-server:latest
+          imagePullPolicy: Never
           ports:
-            - containerPort: 5555
+            - containerPort: 5560
           envFrom:
             - secretRef:
                 name: genkart-server-secrets
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5560
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5560
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
           resources:
             requests:
               cpu: "100m"
@@ -35,12 +50,13 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/path: "/metrics"
-    prometheus.io/port: "5555"
+    prometheus.io/port: "5560"
 spec:
   selector:
     app: genkart-server
+  type: NodePort
   ports:
     - protocol: TCP
-      port: 5555
-      targetPort: 5555
-  type: ClusterIP
+      port: 5560
+      targetPort: 5560
+      nodePort: 30056

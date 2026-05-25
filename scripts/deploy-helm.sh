@@ -26,7 +26,7 @@ done
 get_env() {
   VAR=$1
   FILE=$2
-  grep -E "^$VAR=" "$FILE" | head -n1 | cut -d'=' -f2- | tr -d "'\""
+  grep -E "^$VAR=" "$FILE" | head -n1 | cut -d'=' -f2- | tr -d "'\"\r"
 }
 
 # Read client env vars from client/.env

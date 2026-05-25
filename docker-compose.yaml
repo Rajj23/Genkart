@@ -1,16 +1,4 @@
 services:
-  client:
-    container_name: gen-client
-    build:
-      context: ./client
-      dockerfile: next.dockerfile
-    ports:
-      - '3005:3005'
-    env_file:
-      - ./client/.env
-    depends_on:
-      - server
-
   server:
     container_name: gen-serv
     build:
@@ -20,3 +8,45 @@ services:
       - '5560:5560'
     env_file:
       - ./server/.env
+    networks:
+      - genkart-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5560/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  client:
+    container_name: gen-client
+    build:
+      context: ./client
+      dockerfile: next.dockerfile
+      args:
+        # NEXT_PUBLIC_ vars MUST be passed as build-time ARGs so Next.js
+        # bakes them into the static bundle for the browser.
+        #
+        # In Docker Compose: the browser on your host machine reaches the server
+        # through the HOST-mapped port localhost:5560 (not the container name).
+        NEXT_PUBLIC_API: http://localhost:5560/api
+        NEXT_PUBLIC_CLIENT_URL: http://localhost:3005
+        NEXT_PUBLIC_JWT_SECRET: "hcsa$*&%agmnsNd^$#iuDgtyb^&*FDG^%$#@!~FJhgbbdsaf"
+        NEXT_PUBLIC_JWT_USER_SECRET: "v&^*FDgtyb^&*FDG^%$#@!~FJhgbbdsaf*V1"
+        NEXT_PUBLIC_NODE_ENV: production
+    ports:
+      - '3005:3005'
+    environment:
+      # Runtime env var for SSR/server-side requests (Next.js → server, both in Docker network)
+      NEXT_PUBLIC_API: http://gen-serv:5560/api
+    env_file:
+      - ./client/.env
+    depends_on:
+      - server
+    networks:
+      - genkart-net
+    restart: unless-stopped
+
+networks:
+  genkart-net:
+    driver: bridge

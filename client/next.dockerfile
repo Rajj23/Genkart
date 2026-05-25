@@ -1,12 +1,10 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# ── Install dependencies only when needed ────────────────────────────────────
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
@@ -15,52 +13,55 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-
-
+# ── Build the application ─────────────────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Accept build-time env vars for Next.js NEXT_PUBLIC_ variables.
+# These MUST be declared as ARGs and then set as ENVs before `npm run build`
+# so that Next.js can bake them into the static bundle.
+ARG NEXT_PUBLIC_API
+ARG NEXT_PUBLIC_CLIENT_URL
+ARG NEXT_PUBLIC_JWT_SECRET
+ARG NEXT_PUBLIC_JWT_USER_SECRET
+ARG NEXT_PUBLIC_NODE_ENV
 
-# RUN yarn build && ls -l /app/.next
+ENV NEXT_PUBLIC_API=$NEXT_PUBLIC_API
+ENV NEXT_PUBLIC_CLIENT_URL=$NEXT_PUBLIC_CLIENT_URL
+ENV NEXT_PUBLIC_JWT_SECRET=$NEXT_PUBLIC_JWT_SECRET
+ENV NEXT_PUBLIC_JWT_USER_SECRET=$NEXT_PUBLIC_JWT_USER_SECRET
+ENV NEXT_PUBLIC_NODE_ENV=$NEXT_PUBLIC_NODE_ENV
 
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
+# ── Production runner ─────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
-# Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
+# Standalone output – copies only the files needed to run the server
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3005
-
-ENV PORT 3005
-# set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3005
+ENV HOSTNAME="0.0.0.0"
 
 # server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
 CMD ["node", "server.js"]

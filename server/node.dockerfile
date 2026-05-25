@@ -12,14 +12,14 @@ WORKDIR /app
 RUN apk add --no-cache tini
 
 ENV NODE_ENV=production
-ENV PORT=5555
+ENV PORT=5560
 
 # Copy only needed files
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Expose the port the app runs on
-EXPOSE 5555
+EXPOSE 5560
 
 # Use tini as the entrypoint for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--"]

@@ -1,22 +1,26 @@
-#!/bin/zsh
-# Script to deploy Genkart app to GKE using Helm only (no ArgoCD)
-# Usage: ./deploy-argocd.sh <GCP_PROJECT> <GKE_CLUSTER_NAME> <GKE_REGION>
+#!/bin/bash
+# Script to deploy Genkart app to local Minikube using Helm
+# Usage: ./scripts/deploy-local.sh
 
 set -e
 
-# Ensure script is run with 3 arguments
-GCP_PROJECT="$1"
-GKE_CLUSTER_NAME="$2"
-GKE_REGION="$3"
+# Add Helm installation path on Windows to PATH (unconditional export for all shell types)
+export PATH=$PATH:/c/helm:/C/helm:"C:\helm":"C:/helm":/mnt/c/helm
 
-# Check if all required arguments are provided
-if [ -z "$GCP_PROJECT" ] || [ -z "$GKE_CLUSTER_NAME" ] || [ -z "$GKE_REGION" ]; then
-  echo "Usage: $0 <GCP_PROJECT> <GKE_CLUSTER_NAME> <GKE_REGION>"
-  exit 1
+# Translate Windows kubeconfig paths to WSL paths if running in WSL
+if grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
+  if [ -f "/mnt/c/Users/hp/.kube/config" ]; then
+    echo "[WSL Detected] Copying and translating Windows Kubeconfig for WSL..."
+    mkdir -p ~/.kube
+    cp /mnt/c/Users/hp/.kube/config ~/.kube/config_wsl
+    sed -i 's|C:\\Users\\hp|/mnt/c/Users/hp|g' ~/.kube/config_wsl
+    sed -i 's|\\|/|g' ~/.kube/config_wsl
+    export KUBECONFIG=~/.kube/config_wsl
+  fi
 fi
 
 # Check for required tools
-for tool in gcloud kubectl helm; do
+for tool in kubectl; do
   if ! command -v $tool >/dev/null 2>&1; then
     echo "[ERROR] $tool is not installed. Please install it before running this script."
     exit 1
@@ -24,11 +28,22 @@ for tool in gcloud kubectl helm; do
   echo "[CHECK] $tool is installed."
 done
 
+# Check for helm or helm.exe (crucial for WSL/Windows bash environment)
+if command -v helm >/dev/null 2>&1; then
+  HELM_CMD="helm"
+elif command -v helm.exe >/dev/null 2>&1; then
+  HELM_CMD="helm.exe"
+else
+  echo "[ERROR] helm is not installed. Please install it before running this script."
+  exit 1
+fi
+echo "[CHECK] helm is installed."
+
 # Helper to get env var from file
 get_env() {
   VAR=$1
   FILE=$2
-  grep -E "^$VAR=" "$FILE" | head -n1 | cut -d'=' -f2- | tr -d "'\""
+  grep -E "^$VAR=" "$FILE" | head -n1 | cut -d'=' -f2- | tr -d "'\"\r"
 }
 
 # Read client env vars from client/.env
@@ -63,9 +78,17 @@ JWT_USER_SECRET=$(get_env JWT_USER_SECRET $SERVER_ENV)
 JWT_EXPIRES_IN=$(get_env JWT_EXPIRES_IN $SERVER_ENV)
 
 # Encode values to base64 (no newlines)
-function b64() { echo -n "$1" | base64 | tr -d '\n'; }
+function b64() {
+  # Handle cross-platform base64 encoding
+  if echo -n "$1" | base64 -w 0 >/dev/null 2>&1; then
+    echo -n "$1" | base64 -w 0
+  else
+    echo -n "$1" | base64 | tr -d '\n'
+  fi
+}
 
-# Create helm directory structure
+echo "Generating Secrets for Helm templates..."
+
 cat > helm/templates/client-secret.yaml <<EOF
 apiVersion: v1
 kind: Secret
@@ -73,6 +96,7 @@ metadata:
   name: genkart-client-secrets
   labels:
     app: genkart-client
+    app.kubernetes.io/managed-by: "Helm"
 type: Opaque
 data:
   NEXT_PUBLIC_API: $(b64 "$NEXT_PUBLIC_API")
@@ -82,7 +106,6 @@ data:
   NEXT_PUBLIC_NODE_ENV: $(b64 "$NEXT_PUBLIC_NODE_ENV")
 EOF
 
-# Create helm directory structure
 cat > helm/templates/server-secret.yaml <<EOF
 apiVersion: v1
 kind: Secret
@@ -107,25 +130,10 @@ data:
   JWT_EXPIRES_IN: $(b64 "$JWT_EXPIRES_IN")
 EOF
 
-# Create helm Chart.yaml
-STEP=1
-echo "\n[STEP $STEP] Authenticating to GKE..."
-gcloud container clusters get-credentials "$GKE_CLUSTER_NAME" --region "$GKE_REGION" --project "$GCP_PROJECT"
-
-# Create helm Chart.yaml
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Ensuring 'default' namespace exists..."
+echo "Ensuring 'default' namespace exists..."
 kubectl get ns default >/dev/null 2>&1 || kubectl create namespace default
 
-# Create helm Chart.yaml
-
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Updating Helm repos..."
-helm repo update
-
-# Create helm Chart.yaml
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Checking and cleaning up pre-existing secrets that block Helm install..."
+echo "Checking and cleaning up pre-existing secrets that block Helm install..."
 for secret in genkart-client-secrets genkart-server-secrets; do
   if kubectl get secret $secret -n default >/dev/null 2>&1; then
     MANAGED_BY=$(kubectl get secret $secret -n default -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null)
@@ -136,38 +144,23 @@ for secret in genkart-client-secrets genkart-server-secrets; do
   fi
 done
 
-# Create helm Chart.yaml
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Deploying Genkart app using Helm..."
-if [ -f "helm/values-secret.yaml" ]; then
-  helm upgrade --install genkart ./helm -f helm/values.yaml -f helm/values-secret.yaml --namespace default --create-namespace
-  echo "[INFO] Genkart app deployed via Helm (with secrets)."
-else
-  echo "[WARN] helm/values-secret.yaml not found. Deploying without secrets file."
-  helm upgrade --install genkart ./helm -f helm/values.yaml --namespace default --create-namespace
-  echo "[INFO] Genkart app deployed via Helm (without secrets)."
-fi
+echo "Deploying Genkart app to Minikube using Helm..."
+# Overriding repository values for local registry or minikube local image access
+# If using minikube docker-env, it accesses the images built locally.
+# We set pullPolicy to IfNotPresent so it uses locally built images.
+$HELM_CMD upgrade --install genkart ./helm \
+  -f helm/values.yaml \
+  --set image.client.pullPolicy=IfNotPresent \
+  --set image.server.pullPolicy=IfNotPresent \
+  --namespace default --create-namespace
 
-# Wait for server LoadBalancer IP
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Waiting for client LoadBalancer IP..."
-for i in {1..30}; do
-  CLIENT_LB_IP=$(kubectl get svc genkart-client -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-  if [ -n "$CLIENT_LB_IP" ]; then
-    break
-  fi
-  sleep 10
-done
-if [ -z "$CLIENT_LB_IP" ]; then
-  echo "[WARN] Client LoadBalancer IP not assigned yet. Check with: kubectl get svc genkart-client -n default"
-else
-  echo "[INFO] Genkart Client UI: http://$CLIENT_LB_IP:3005"
-fi
+echo "Waiting briefly for deployment..."
+kubectl rollout status deployment/genkart-client -n default --timeout=60s || echo "[WARN] Timeout waiting for client rollout"
+kubectl rollout status deployment/genkart-server -n default --timeout=60s || echo "[WARN] Timeout waiting for server rollout"
 
-# Wait for server LoadBalancer IP
-STEP=$((STEP+1))
-echo "\n[STEP $STEP] Automated deployment complete!"
-echo "To check status: kubectl get all -n default"
-echo "To get client LoadBalancer IP: kubectl get svc genkart-client -n default"
-echo "To get server service: kubectl get svc genkart-server -n default"
-echo "\n[INFO] Done."
+echo ""
+echo "=== Local Deployment Complete! ==="
+echo "Note: If using Minikube, run 'minikube tunnel' in another terminal to allocate External IPs for LoadBalancer services."
+echo "Alternatively, you can access the frontend via port-forwarding:"
+echo "  kubectl port-forward svc/genkart-client 3005:3005"
+echo ""
