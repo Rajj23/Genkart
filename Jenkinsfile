@@ -166,9 +166,9 @@ NEXT_PUBLIC_API=http://localhost:5560/api
 
     stage('Deploy') {
       steps {
-        bat 'kubectl apply -f k8s/'
-        bat 'kubectl rollout restart deployment/genkart-client'
-        bat 'kubectl rollout restart deployment/genkart-server'
+        bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl apply -f k8s/'
+        bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl rollout restart deployment genkart-client'
+        bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl rollout restart deployment genkart-server'
       }
     }
   }
