@@ -57,14 +57,14 @@ pipeline {
     stage('Create Env Files') {
       steps {
         withCredentials([
-          string(credentialsId: 'mongo-uri', variable: 'MONGO_URI'),
-          string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET'),
-          string(credentialsId: 'jwt-user-secret', variable: 'JWT_USER_SECRET'),
-          string(credentialsId: 'email-user', variable: 'EMAIL_USER'),
-          string(credentialsId: 'email-pass', variable: 'EMAIL_PASS'),
-          string(credentialsId: 'cloudinary-cloud-name', variable: 'CLOUDINARY_CLOUD_NAME'),
-          string(credentialsId: 'cloudinary-api-key', variable: 'CLOUDINARY_API_KEY'),
-          string(credentialsId: 'cloudinary-api-secret', variable: 'CLOUDINARY_API_SECRET')
+          string(credentialsId: 'MONGO_URI', variable: 'MONGO_URI'),
+          string(credentialsId: 'JWT_SECRET', variable: 'JWT_SECRET'),
+          string(credentialsId: 'JWT_USER_SECRET', variable: 'JWT_USER_SECRET'),
+          string(credentialsId: 'EMAIL_USER', variable: 'EMAIL_USER'),
+          string(credentialsId: 'EMAIL_PASS', variable: 'EMAIL_PASS'),
+          string(credentialsId: 'CLOUDINARY_CLOUD_NAME', variable: 'CLOUDINARY_CLOUD_NAME'),
+          string(credentialsId: 'CLOUDINARY_API_KEY', variable: 'CLOUDINARY_API_KEY'),
+          string(credentialsId: 'CLOUDINARY_API_SECRET', variable: 'CLOUDINARY_API_SECRET')
         ]) {
           dir('server') {
             writeFile file: '.env', text: """
