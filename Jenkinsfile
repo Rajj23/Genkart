@@ -165,37 +165,10 @@ NEXT_PUBLIC_API=http://localhost:5560/api
     }
 
     stage('Deploy') {
-      when {
-        expression { return params.DEPLOY }
-      }
       steps {
-        echo 'Starting deploy...'
-        script {
-          def bashAvailable = bat(script: 'bash --version >nul 2>nul', returnStatus: true) == 0
-          if (!bashAvailable) {
-            error 'Bash is not available on this Windows agent. Install Git Bash (which provides bash.exe on PATH).'
-          }
-          
-          if (params.GCP_PROJECT?.trim()) {
-            echo "GCP Project specified. Deploying to GKE..."
-            if (fileExists('scripts/deploy-helm.sh')) {
-              withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                bat 'if not exist "%USERPROFILE%\\.kube" mkdir "%USERPROFILE%\\.kube"'
-                bat 'copy /Y "%KUBECONFIG_FILE%" "%USERPROFILE%\\.kube\\config"'
-                bat "bash scripts/deploy-helm.sh ${params.GCP_PROJECT} ${params.GKE_CLUSTER} ${params.GKE_REGION}"
-              }
-            } else {
-              error 'deploy-helm.sh not found. Cannot deploy to GKE.'
-            }
-          } else {
-            echo "No GCP Project specified. Deploying to local Minikube cluster..."
-            if (fileExists('scripts/deploy-local.sh')) {
-              bat "bash scripts/deploy-local.sh"
-            } else {
-              error 'deploy-local.sh not found. Cannot deploy to local Kubernetes.'
-            }
-          }
-        }
+        bat 'kubectl apply -f k8s/'
+        bat 'kubectl rollout restart deployment/genkart-client'
+        bat 'kubectl rollout restart deployment/genkart-server'
       }
     }
   }
