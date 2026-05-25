@@ -16,7 +16,7 @@ spec:
         - name: client
           image: chirag117/gen-client:v1
           ports:
-            - containerPort: 3005
+            - containerPort: 3000
           envFrom:
             - secretRef:
                 name: genkart-client-secrets
@@ -36,7 +36,7 @@ spec:
   selector:
     app: genkart-client
   ports:
-    - protocol: TCP
-      port: 3005
-      targetPort: 3005
+  - protocol: TCP
+    port: 3005
+    targetPort: 3000
   type: LoadBalancer

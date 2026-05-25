@@ -3,6 +3,7 @@ const app = express();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const bodyParser = require('body-parser')
+const promClient = require("prom-client");
 
 // Add rate limiting
 const { apiLimiter } = require("./config/rateLimit");
@@ -15,6 +16,15 @@ const userRoutes = require("./routes/userRoutes")
 
 require("dotenv").config();
 require("./db/config");
+
+promClient.collectDefaultMetrics();
+
+const httpRequestDurationSeconds = new promClient.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+});
 
 // app.use(cors());
 
@@ -44,6 +54,29 @@ app.use(
 );
 
 app.use(cookieParser());
+
+app.use((req, res, next) => {
+  if (req.path === "/metrics") {
+    return next();
+  }
+
+  const endTimer = httpRequestDurationSeconds.startTimer();
+
+  res.on("finish", () => {
+    endTimer({
+      method: req.method,
+      route: req.path,
+      status_code: String(res.statusCode),
+    });
+  });
+
+  next();
+});
+
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", promClient.register.contentType);
+  res.end(await promClient.register.metrics());
+});
 
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);

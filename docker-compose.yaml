@@ -17,6 +17,6 @@ services:
       context: ./server
       dockerfile: node.dockerfile
     ports:
-      - '5555:5555'
+      - '5560:5560'
     env_file:
       - ./server/.env
