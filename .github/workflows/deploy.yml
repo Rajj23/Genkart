@@ -1,0 +1,97 @@
+name: Deploy Genkart App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clean Workspace
+        run: |
+          git clean -fdx
+        shell: pwsh
+
+      - name: Create Env Files
+        run: |
+          # Create server .env
+          New-Item -Path "server\.env" -ItemType File -Force
+          Set-Content -Path "server\.env" -Value @"
+          PORT=5560
+          NODE_ENV=development
+          CLIENT_URL=http://localhost:3005
+          MONGO_URI=${{ secrets.MONGO_URI }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_USER_SECRET=${{ secrets.JWT_USER_SECRET }}
+          JWT_EXPIRES_IN=1d
+          EMAIL_USER=${{ secrets.EMAIL_USER }}
+          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+          CLOUDINARY_FOLDER_NAME=genkart
+          RATE_LIMIT_WINDOW_MINUTES=15
+          RATE_LIMIT_MAX=100
+          "@
+
+          # Create client .env
+          New-Item -Path "client\.env" -ItemType File -Force
+          Set-Content -Path "client\.env" -Value @"
+          NEXT_PUBLIC_API=http://localhost:5560/api
+          "@
+        shell: pwsh
+
+      - name: Install Dependencies (Client)
+        run: |
+          cd client
+          npm cache clean --force
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm install --legacy-peer-deps --no-audit --no-fund
+        shell: pwsh
+
+      - name: Install Dependencies (Server)
+        run: |
+          cd server
+          npm cache clean --force
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm install --legacy-peer-deps --no-audit --no-fund
+        shell: pwsh
+
+      - name: Build NextJS Client
+        run: |
+          cd client
+          npm run build
+        shell: pwsh
+
+      - name: Log in to DockerHub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        shell: pwsh
+
+      - name: Build and Push Docker Images
+        run: |
+          $TAG = "${{ github.run_number }}"
+          $CLIENT_IMAGE = "${{ secrets.DOCKER_USERNAME }}/gen-client:$TAG"
+          $SERVER_IMAGE = "${{ secrets.DOCKER_USERNAME }}/gen-serv:$TAG"
+          
+          docker build -f client/next.dockerfile -t $CLIENT_IMAGE .\client
+          docker build -f server/node.dockerfile -t $SERVER_IMAGE .\server
+          
+          docker push $CLIENT_IMAGE
+          docker push $SERVER_IMAGE
+        shell: pwsh
+
+      - name: Deploy to Local Minikube
+        run: |
+          bash scripts/deploy-local.sh
+        shell: bash
