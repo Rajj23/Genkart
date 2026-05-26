@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: client
-          image: rajjaiswal23/gen-client:8
+          image: rajjaiswal23/gen-client:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3005

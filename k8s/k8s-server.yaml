@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: rajjaiswal23/gen-serv:8
+          image: rajjaiswal23/gen-serv:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5560
