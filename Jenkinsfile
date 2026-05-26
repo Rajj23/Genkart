@@ -130,11 +130,11 @@ pipeline {
         // ── 7. Deploy to Kubernetes ────────────────────────────────────────────
         stage('Deploy') {
             steps {
-                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %CLIENT_IMAGE_LATEST%'
-                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %SERVER_IMAGE_LATEST%'
+                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %CLIENT_IMAGE%'
+                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %SERVER_IMAGE%'
+                bat 'powershell -Command "(Get-Content k8s\\k8s-client.yaml) -replace \'rajjaiswal23/gen-client:latest\', \'%CLIENT_IMAGE%\' | Set-Content k8s\\k8s-client.yaml"'
+                bat 'powershell -Command "(Get-Content k8s\\k8s-server.yaml) -replace \'rajjaiswal23/gen-serv:latest\', \'%SERVER_IMAGE%\' | Set-Content k8s\\k8s-server.yaml"'
                 bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl apply -f k8s\\'
-                bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl rollout restart deployment genkart-client'
-                bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl rollout restart deployment genkart-server'
             }
         }
     }
