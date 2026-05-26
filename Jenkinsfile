@@ -14,6 +14,7 @@ pipeline {
         CLIENT_IMAGE_LATEST = 'rajjaiswal23/gen-client:latest'
         SERVER_IMAGE_LATEST = 'rajjaiswal23/gen-serv:latest'
         KUBECONFIG         = 'C:\\Users\\hp\\.kube\\config'
+        MINIKUBE_HOME      = 'C:\\Users\\hp'
     }
 
     stages {
@@ -129,11 +130,11 @@ pipeline {
         // ── 7. Deploy to Kubernetes ────────────────────────────────────────────
         stage('Deploy') {
             steps {
-                bat 'minikube image load %CLIENT_IMAGE_LATEST%'
-                bat 'minikube image load %SERVER_IMAGE_LATEST%'
-                bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl apply -f k8s\\'
-                bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl rollout restart deployment genkart-client'
-                bat 'set KUBECONFIG=C:\\Users\\hp\\.kube\\config && kubectl rollout restart deployment genkart-server'
+                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %CLIENT_IMAGE_LATEST%'
+                bat 'set "MINIKUBE_HOME=C:\\Users\\hp" && minikube image load %SERVER_IMAGE_LATEST%'
+                bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl apply -f k8s\\'
+                bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl rollout restart deployment genkart-client'
+                bat 'set "KUBECONFIG=C:\\Users\\hp\\.kube\\config" && kubectl rollout restart deployment genkart-server'
             }
         }
     }
