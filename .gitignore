@@ -53,3 +53,7 @@ terraform/.terraform/providers/registry.terraform.io/hashicorp/null/3.2.4/linux_
 k8s/*secret*.yaml
 helm/**/*secret*.yaml
 **/*secret*.yaml
+
+# Local dev environment helper files
+start-dev.ps1
+RESTART_GUIDE.md
