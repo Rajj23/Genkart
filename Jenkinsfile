@@ -8,10 +8,12 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAMESPACE = 'rajjaiswal23'
-        CLIENT_IMAGE    = "rajjaiswal23/gen-client:${env.BUILD_NUMBER}"
-        SERVER_IMAGE    = "rajjaiswal23/gen-serv:${env.BUILD_NUMBER}"
-        KUBECONFIG      = 'C:\\Users\\hp\\.kube\\config'
+        IMAGE_NAMESPACE    = 'rajjaiswal23'
+        CLIENT_IMAGE       = "rajjaiswal23/gen-client:${env.BUILD_NUMBER}"
+        SERVER_IMAGE       = "rajjaiswal23/gen-serv:${env.BUILD_NUMBER}"
+        CLIENT_IMAGE_LATEST = 'rajjaiswal23/gen-client:latest'
+        SERVER_IMAGE_LATEST = 'rajjaiswal23/gen-serv:latest'
+        KUBECONFIG         = 'C:\\Users\\hp\\.kube\\config'
     }
 
     stages {
@@ -96,8 +98,9 @@ pipeline {
         // ── 5. Docker build ────────────────────────────────────────────────────
         stage('Docker Build') {
             steps {
-                bat "docker build -f client\\next.dockerfile -t %CLIENT_IMAGE% client"
-                bat "docker build -f server\\node.dockerfile -t %SERVER_IMAGE% server"
+                // Build with build-number tag, then also tag as :latest
+                bat "docker build -f client\\next.dockerfile -t %CLIENT_IMAGE% -t %CLIENT_IMAGE_LATEST% client"
+                bat "docker build -f server\\node.dockerfile -t %SERVER_IMAGE% -t %SERVER_IMAGE_LATEST% server"
             }
         }
 
@@ -112,8 +115,12 @@ pipeline {
                     )
                 ]) {
                     bat 'echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin'
+                    // Push versioned tag
                     bat 'docker push %CLIENT_IMAGE%'
                     bat 'docker push %SERVER_IMAGE%'
+                    // Also push :latest so K8s manifests always pull newest image
+                    bat 'docker push %CLIENT_IMAGE_LATEST%'
+                    bat 'docker push %SERVER_IMAGE_LATEST%'
                     bat 'docker logout || echo logout-skipped'
                 }
             }

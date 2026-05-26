@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: client
-          image: genkart-main-client:latest
-          imagePullPolicy: Never
+          image: rajjaiswal23/gen-client:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3005
           envFrom:

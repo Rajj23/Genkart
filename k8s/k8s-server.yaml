@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: server
-          image: genkart-main-server:latest
-          imagePullPolicy: Never
+          image: rajjaiswal23/gen-serv:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5560
           envFrom:
