@@ -15,7 +15,7 @@ spec:
       containers:
         - name: server
           image: rajjaiswal23/gen-serv:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5560
           envFrom:

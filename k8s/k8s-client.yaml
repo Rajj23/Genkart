@@ -15,7 +15,7 @@ spec:
       containers:
         - name: client
           image: rajjaiswal23/gen-client:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3005
           envFrom:
