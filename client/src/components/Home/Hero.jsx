@@ -21,7 +21,8 @@ const Hero = () => {
               Don&apos;t be slow! Our prices are low..!
             </h1>
             <h3>
-               what they need ?{" "}
+              Genkart is a see platform to enhance online shopping
+              performance for the customers to provide what they need ?{" "}
             </h3>
             <div className="pt-5">
               <Link
